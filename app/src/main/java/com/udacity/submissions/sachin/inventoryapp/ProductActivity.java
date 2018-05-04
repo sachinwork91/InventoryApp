@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -16,6 +17,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.app.NavUtils;
 import android.support.v4.content.CursorLoader;
+import android.support.v4.content.FileProvider;
 import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -28,6 +30,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import java.io.ByteArrayOutputStream;
@@ -35,6 +38,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class ProductActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>, ActivityCompat.OnRequestPermissionsResultCallback {
 
@@ -44,7 +49,7 @@ public class ProductActivity extends AppCompatActivity implements LoaderManager.
     Button increaseButton;
     Button decreaseButton;
     Button placeOrderButton;
-    ImageButton productImageButton;
+    ImageView productImageButton;
 
     public static final int PRODUCTDETAILLOADER = 1;
     private static final int CAMERA_INTENT = 0;
@@ -86,7 +91,7 @@ public class ProductActivity extends AppCompatActivity implements LoaderManager.
         increaseButton = (Button) findViewById(R.id.increaseQty);
         decreaseButton = (Button) findViewById(R.id.decreaseQty);
         placeOrderButton = (Button) findViewById(R.id.placeOrder);
-        productImageButton = (ImageButton) findViewById(R.id.productImage);
+        productImageButton = (ImageView) findViewById(R.id.productImage);
     }
 
 
@@ -364,16 +369,17 @@ public class ProductActivity extends AppCompatActivity implements LoaderManager.
         builder.show();
     }
 
+    //Starting Gallery Intent
     private void galleryIntent()
-    {
-        Intent intent = new Intent();
+    {   Intent intent = new Intent();
         intent.setType("image/*");
         intent.setAction(Intent.ACTION_GET_CONTENT);//
         startActivityForResult(Intent.createChooser(intent, "Select File"), GALLERY_INTENT);
     }
+
+    //Starting Camera Intent
     public  void cameraIntent()
-    {
-        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+    {   Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         startActivityForResult(intent, CAMERA_INTENT);
     }
 
@@ -390,7 +396,6 @@ public class ProductActivity extends AppCompatActivity implements LoaderManager.
                 Toast.makeText(this, "RETURNED CAMERA", Toast.LENGTH_SHORT).show();
                 onCaptureImageResult(data);
             }
-               // onCaptureImageResult(data);
         }
     }
 
@@ -422,32 +427,9 @@ public class ProductActivity extends AppCompatActivity implements LoaderManager.
 
     private void onCaptureImageResult(Intent data) {
         Bitmap thumbnail = (Bitmap) data.getExtras().get("data");
+        Bitmap fullImage = null;
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-       // thumbnail.compress(Bitmap.CompressFormat.JPEG, 90, bytes);
-       /* File destination = new File(Environment.getExternalStorageDirectory(),
-                System.currentTimeMillis() + ".jpg");
-        FileOutputStream fo;
-        try {
-            destination.createNewFile();
-            fo = new FileOutputStream(destination);
-            fo.write(bytes.toByteArray());
-            fo.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-       */
-
+        productImageButton.setImageBitmap(thumbnail);
         productImageButton.setBackgroundResource(0);
-       productImageButton.setImageBitmap(thumbnail);
-    //   productImageButton.setImageBitmap(thumbnail, 0 , 12, false);
-       //profileImage.setImageBitmap(Bitmap.createScaledBitmap(b, 120, 120, false));
-
-
     }
-
-
-
-
 }
