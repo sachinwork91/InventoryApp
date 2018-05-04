@@ -1,0 +1,15 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.udacity.submissions.sachin.inventoryapp.MainActivity">
+    <item
+        android:id="@+id/dummyAction"
+        android:orderInCategory="100"
+        android:title="Add Dummy Data"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/deleteAllAction"
+        android:orderInCategory="100"
+        android:title="Delete All"
+        app:showAsAction="never" />
+</menu>
