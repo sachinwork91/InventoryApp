@@ -17,7 +17,9 @@ public class ProductDbHelper extends SQLiteOpenHelper {
             + ProductContract.ProductsEntry._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
             + ProductContract.ProductsEntry.PRODUCTNAME + " TEXT NOT NULL, "
             + ProductContract.ProductsEntry.PRICE + " INTEGER NOT NULL,  "
-            + ProductContract.ProductsEntry.QUANTITY + " INTEGER NOT NULL DEFAULT 0) ; ";
+            + ProductContract.ProductsEntry.QUANTITY + " INTEGER NOT NULL DEFAULT 0 ,  "
+            + ProductContract.ProductsEntry.PRODUCTIMAGE + " BLOB ); "  ;
+
 
     public ProductDbHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);

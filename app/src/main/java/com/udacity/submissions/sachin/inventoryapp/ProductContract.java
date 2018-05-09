@@ -14,6 +14,7 @@ public class ProductContract {
     public static final String PATH_PRODUCTS = "products";
     public static final Uri CONTENT_URI = Uri.withAppendedPath(BASE_CONTENT_URI, PATH_PRODUCTS);
 
+    //An empty private constructor makes sure that the class is not going to be initialised.
     private ProductContract() {
     };
 
@@ -24,5 +25,6 @@ public class ProductContract {
         public static final String PRODUCTNAME = "product_name";
         public static final String PRICE = "price";
         public static final String QUANTITY = "quantity";
+        public static final String PRODUCTIMAGE = "product_image";
     }
 }
