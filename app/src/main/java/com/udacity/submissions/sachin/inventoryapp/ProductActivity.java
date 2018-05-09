@@ -1,8 +1,10 @@
 package com.udacity.submissions.sachin.inventoryapp;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -10,12 +12,15 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.app.NavUtils;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.FileProvider;
 import android.support.v4.content.Loader;
@@ -41,6 +46,8 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import static android.support.v4.app.ActivityCompat.requestPermissions;
+
 public class ProductActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>, ActivityCompat.OnRequestPermissionsResultCallback {
 
     EditText productNametv;
@@ -50,12 +57,14 @@ public class ProductActivity extends AppCompatActivity implements LoaderManager.
     Button decreaseButton;
     Button placeOrderButton;
     ImageView productImageButton;
-
+    Bitmap productimage = null;
+    //static Variables Used
     public static final int PRODUCTDETAILLOADER = 1;
     private static final int CAMERA_INTENT = 0;
     private static final int GALLERY_INTENT = 1;
-    String userChoosenTask ="";
-
+    public static final int GALLEY_READ_REQUEST = 101;
+    public static final int EXTERNAL_WRITE_REQUEST = 102;
+    public static final int CAMERA_REQUEST = 103;
     Uri uri;
     private boolean dataChanged = false;
 
@@ -72,6 +81,13 @@ public class ProductActivity extends AppCompatActivity implements LoaderManager.
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_product);
         findViews();
+        if (savedInstanceState != null) {
+            byte[] bitmapdata = savedInstanceState.getByteArray("productImage");
+            if (bitmapdata != null) {
+                productimage = BitmapFactory.decodeByteArray(bitmapdata, 0, bitmapdata.length);
+                productImageButton.setImageBitmap(productimage);
+            }
+        }
         Intent intent = getIntent();
         uri = intent.getData();
         if (uri == null) {
@@ -94,7 +110,6 @@ public class ProductActivity extends AppCompatActivity implements LoaderManager.
         productImageButton = (ImageView) findViewById(R.id.productImage);
     }
 
-
     //This method displays the results
     void displayInfo(Cursor cursor) {
         if (cursor == null || cursor.getCount() < 1) {
@@ -104,10 +119,21 @@ public class ProductActivity extends AppCompatActivity implements LoaderManager.
             int productNameIndex = cursor.getColumnIndex(ProductContract.ProductsEntry.PRODUCTNAME);
             int productPriceIndex = cursor.getColumnIndex(ProductContract.ProductsEntry.PRICE);
             int productQuantityIndex = cursor.getColumnIndex(ProductContract.ProductsEntry.QUANTITY);
+            int productImageIndex = cursor.getColumnIndex(ProductContract.ProductsEntry.PRODUCTIMAGE);
             //Setting up the Data
             productNametv.setText(cursor.getString(productNameIndex));
             productPricetv.setText(cursor.getInt(productPriceIndex) + "");
             productQtytv.setText(cursor.getInt(productQuantityIndex) + "");
+
+            if (cursor.getBlob(productImageIndex) != null && productimage == null) {
+                byte[] byteArray = cursor.getBlob(productImageIndex);
+
+                Bitmap bm = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
+                productimage = bm;
+                Log.d("Test", "DisplayInfo Cursor");
+                productImageButton.setImageBitmap(bm);
+                productImageButton.setBackgroundResource(0);
+            }
         }
     }
 
@@ -138,12 +164,16 @@ public class ProductActivity extends AppCompatActivity implements LoaderManager.
             @Override
             public void onClick(View view) {
                 //If no data is changed then return
-                if (!dataChanged) {
-                    Toast.makeText(ProductActivity.this, "Please enter the Detais", Toast.LENGTH_SHORT).show();
-                    return;
-                }
+                final Intent emailIntent = new Intent(android.content.Intent.ACTION_SEND);
 
-                insert();
+                /* Fill it with Data */
+                emailIntent.setType("plain/text");
+                emailIntent.putExtra(android.content.Intent.EXTRA_EMAIL, new String[]{"to@email.com"});
+                emailIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "Order Confirmation");
+                emailIntent.putExtra(android.content.Intent.EXTRA_TEXT, "Please Confirm My Order for" + productNametv.getText().toString() +
+                        " of " + productQtytv.getText().toString() + " Qty " + " At Price " + productPricetv.getText().toString());
+
+                startActivity(Intent.createChooser(emailIntent, "Send mail..."));
             }
         });
 
@@ -159,6 +189,7 @@ public class ProductActivity extends AppCompatActivity implements LoaderManager.
         productQtytv.setOnTouchListener(mTouchListener);
         increaseButton.setOnTouchListener(mTouchListener);
         decreaseButton.setOnTouchListener(mTouchListener);
+        productImageButton.setOnTouchListener(mTouchListener);
     }
 
     @Override
@@ -179,7 +210,19 @@ public class ProductActivity extends AppCompatActivity implements LoaderManager.
             return true;
         }
         if (id == R.id.delete) {
-            delete();
+            DialogInterface.OnClickListener discardButtonClickListener =
+                    new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            // User clicked "Discard" button, close the current activity.
+                            delete();
+                        }
+                    };
+
+            // Show dialog that there are unsaved changes
+            showDeleteDialog(discardButtonClickListener);
+
+            //   delete();
             return true;
         }
         if (id == android.R.id.home) {
@@ -226,28 +269,26 @@ public class ProductActivity extends AppCompatActivity implements LoaderManager.
         productQtytv.setText("0");
     }
 
+    //Insert the data in the database
     void insert() {
-        //If no data is changed then return
-        if (!dataChanged) {
-            return;
-        }
         String productPrice = productPricetv.getText().toString();
         String productQty = productQtytv.getText().toString();
-
-        if (!onlyNumbers(productPrice) || !onlyNumbers(productQty) ) {
-            Toast.makeText(this, "Please enter Numerical Value in Price and Qty", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if(TextUtils.isEmpty(productNametv.getText().toString())){
-            Toast.makeText(this, "Product Name Cannot be Empty! ", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        //Validating Before Inserting ...
+        checkValidation();
 
         ContentValues contentValues = new ContentValues();
         contentValues.put(ProductContract.ProductsEntry.PRODUCTNAME, productNametv.getText().toString());
         contentValues.put(ProductContract.ProductsEntry.PRICE, productPrice);
         contentValues.put(ProductContract.ProductsEntry.QUANTITY, productQty);
+
+        if (productimage != null) {
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            productimage.compress(Bitmap.CompressFormat.PNG, 0, stream);
+            contentValues.put(ProductContract.ProductsEntry.PRODUCTIMAGE, stream.toByteArray());
+        } else {
+            Toast.makeText(this, "Please Select Product Image ", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         if (uri == null) {
             getContentResolver().insert(ProductContract.CONTENT_URI, contentValues);
@@ -255,9 +296,10 @@ public class ProductActivity extends AppCompatActivity implements LoaderManager.
             getContentResolver().update(uri, contentValues, null, null);
             Toast.makeText(ProductActivity.this, "Data updated Successfully", Toast.LENGTH_SHORT).show();
         }
-        finish();// TO close the current Activity After Updating
+        finish();// To close the current Activity After Updating
     }
 
+    //This Method Deletes
     void delete() {
         getContentResolver().delete(uri, null, null);
         finish();
@@ -340,27 +382,25 @@ public class ProductActivity extends AppCompatActivity implements LoaderManager.
         }
     }
 
+    //This method selects the image
     private void selectImage() {
-        final CharSequence[] items = { "Take Photo", "Choose from Library",
-                "Cancel" };
+        final CharSequence[] items = {"Take Photo", "Choose from Library",
+                "Cancel"};
         AlertDialog.Builder builder = new AlertDialog.Builder(ProductActivity.this);
         builder.setTitle("Add Photo!");
 
         builder.setItems(items, new DialogInterface.OnClickListener() {
+            @RequiresApi(api = Build.VERSION_CODES.M)
             @Override
             public void onClick(DialogInterface dialog, int item) {
 
                 if (items[item].equals("Take Photo")) {
-                    boolean result=Utility.checkPermission(ProductActivity.this, 2);
-                    Log.d("Test", "REsult from camera " + result);
-                    userChoosenTask = "Take Photo";
-                    if(result)
-                        cameraIntent();
+                    checkCameraPermission(getBaseContext());
                 } else if (items[item].equals("Choose from Library")) {
-                    boolean result=Utility.checkPermission(ProductActivity.this, 1);
-                    userChoosenTask = "Choose from Library";
-                    if(result)
-                        galleryIntent();
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        checkGalleryPermission(getBaseContext());
+                    }
+
                 } else if (items[item].equals("Cancel")) {
                     dialog.dismiss();
                 }
@@ -370,66 +410,166 @@ public class ProductActivity extends AppCompatActivity implements LoaderManager.
     }
 
     //Starting Gallery Intent
-    private void galleryIntent()
-    {   Intent intent = new Intent();
+    private void galleryIntent() {
+        Intent intent = new Intent();
         intent.setType("image/*");
         intent.setAction(Intent.ACTION_GET_CONTENT);//
         startActivityForResult(Intent.createChooser(intent, "Select File"), GALLERY_INTENT);
     }
 
     //Starting Camera Intent
-    public  void cameraIntent()
-    {   Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+    public void cameraIntent() {
+        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         startActivityForResult(intent, CAMERA_INTENT);
     }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        Log.d("TEST", "result code  => " + resultCode );
 
-        if ( resultCode == Activity.RESULT_OK ) {
-            if (requestCode == GALLERY_INTENT){
+        if (resultCode == Activity.RESULT_OK) {
+            if (requestCode == GALLERY_INTENT) {
                 Toast.makeText(this, "RETURNED Gallery", Toast.LENGTH_SHORT).show();
                 onSelectFromGalleryResult(data);
-            }else if (requestCode == CAMERA_INTENT){
+            } else if (requestCode == CAMERA_INTENT) {
                 Toast.makeText(this, "RETURNED CAMERA", Toast.LENGTH_SHORT).show();
                 onCaptureImageResult(data);
             }
         }
     }
 
+    //This method handles the result from Gallery Intent
     private void onSelectFromGalleryResult(Intent data) {
-        Bitmap bm=null;
+        Bitmap bm = null;
         if (data != null) {
             try {
                 bm = MediaStore.Images.Media.getBitmap(getApplicationContext().getContentResolver(), data.getData());
+                productimage = bm;
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
         productImageButton.setImageBitmap(bm);
+        productImageButton.setBackgroundResource(0);
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         // BEGIN_INCLUDE(onRequestPermissionsResult)
-        if (requestCode == Utility.MY_PERMISSIONS_REQUEST_CAMERA) {
+        if (requestCode == ProductActivity.CAMERA_REQUEST) {
             // Request for camera permission.
             if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // Permission has been granted. Start camera preview Activity.
-              cameraIntent();
-            } else {
-                Toast.makeText(this, "SOME HAPPENDED", Toast.LENGTH_SHORT).show();
+                cameraIntent();
+            }
+
+        } else if (requestCode == ProductActivity.GALLEY_READ_REQUEST) {
+            // Request for camera permission.
+            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission has been granted. Start camera preview Activity.
+                galleryIntent();
             }
         }
     }
 
+    //Handles the result from camera Intent
     private void onCaptureImageResult(Intent data) {
         Bitmap thumbnail = (Bitmap) data.getExtras().get("data");
+        productimage = thumbnail;
         Bitmap fullImage = null;
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        thumbnail.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
         productImageButton.setImageBitmap(thumbnail);
         productImageButton.setBackgroundResource(0);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (productimage != null) {
+            Bitmap bmp = productimage;
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, stream);
+            byte[] byteArray = stream.toByteArray();
+            outState.putByteArray("productImage", byteArray);
+        } else {
+            outState.putByteArray("productImage", null);
+        }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    void checkGalleryPermission(final Context context) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, ProductActivity.GALLEY_READ_REQUEST);
+            }
+        } else {
+            galleryIntent();
+        }
+    }
+
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    void checkCameraPermission(final Context context) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.CAMERA}, ProductActivity.CAMERA_REQUEST);
+        } else {
+            cameraIntent();
+        }
+    }
+
+    //This method checks for the Validation
+    boolean checkValidation() {
+        String productPrice = productPricetv.getText().toString();
+        String productQty = productQtytv.getText().toString();
+
+        //To handle the New Product
+        if (uri == null && !dataChanged) {
+            Toast.makeText(this, "Please enter the Details of the Product", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        //If no data is changed then return
+        if (!dataChanged) {
+            Toast.makeText(this, "Data Not Changed", Toast.LENGTH_SHORT).show();
+            finish();
+            return false;
+        }
+
+        if (!onlyNumbers(productPrice) || !onlyNumbers(productQty)) {
+            Toast.makeText(this, "Please enter Numerical Value in Price and Qty", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+
+        if (TextUtils.isEmpty(productNametv.getText().toString())) {
+            Toast.makeText(this, "Product Name Cannot be Empty! ", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        if (TextUtils.isEmpty(productPricetv.getText().toString())) {
+            Toast.makeText(this, "Please Provide Product Price ", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+
+        if (TextUtils.isEmpty(productQtytv.getText().toString())) {
+            Toast.makeText(this, "Product Quantity Cannot be Empty! ", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+
+        if (productimage == null) {
+            Toast.makeText(this, "Please select a Product Image Before inserting", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        return true;
+    }
+
+    //This Dailog is used to prompt user while deleting a product
+    private void showDeleteDialog(
+            DialogInterface.OnClickListener discardButtonClickListener) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage("Are you sure to Delete?");
+        builder.setNegativeButton("Cancel", null);
+        builder.setPositiveButton("Yes, Please", discardButtonClickListener);
+        // Create and show the AlertDialog
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
     }
 }
