@@ -8,10 +8,11 @@
     tools:context="com.udacity.submissions.sachin.inventoryapp.ProductActivity">
     <!-- Dummy item to prevent AutoCompleteTextView from receiving focus -->
     <LinearLayout
-        android:focusable="true"
-        android:focusableInTouchMode="true"
         android:layout_width="0px"
-        android:layout_height="0px"/>
+        android:layout_height="0px"
+        android:focusable="true"
+        android:focusableInTouchMode="true" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -44,8 +45,8 @@
             android:id="@+id/productPriceDetail"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:hint="0"
-            android:layout_weight="1" />
+            android:layout_weight="1"
+            android:hint="Enter Product Price" />
     </LinearLayout>
 
     <!--Quantity-->
@@ -63,9 +64,9 @@
             android:id="@+id/productQuantityDetail"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginLeft="5dp"
             android:layout_weight="1"
             android:gravity="center"
-            android:layout_marginLeft="5dp"
             android:hint="0"
             android:text="0" />
 
@@ -83,27 +84,33 @@
             android:text="-"
             android:textSize="16sp" />
     </LinearLayout>
+
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
-    <ImageButton
-        android:layout_width="match_parent"
-        android:layout_height="240dp"
-        android:background="@drawable/noimage"
-        android:layout_gravity="center"
-        android:layout_margin="10dp"
-        android:id="@+id/productImage"/>
+
+            <ImageView
+                android:id="@+id/productImage"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:layout_gravity="center"
+                android:layout_margin="10dp"
+                android:background="@drawable/noimage" />
 
             <Button
                 android:id="@+id/placeOrder"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-        android:layout_gravity="center"
+                android:layout_gravity="center"
                 android:text="PLACE ORDER" />
+
         </LinearLayout>
+
     </ScrollView>
+
 </LinearLayout>

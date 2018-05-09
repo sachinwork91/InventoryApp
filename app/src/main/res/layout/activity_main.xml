@@ -13,14 +13,13 @@
 
     <TextView
         android:id="@+id/emptyView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
         android:gravity="center"
         android:layout_centerInParent="true"
         android:layout_margin="10dp"
 
         android:text="Please Insert Products using Floating Action Button Or \n using Insert Dummy Data From Settings"/>
-
 
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/fab"
@@ -31,6 +30,5 @@
         android:layout_margin="@dimen/fab_margin"
         android:src="@drawable/ic_add_blue"
         app:backgroundTint="@android:color/background_light" />
-
 
 </RelativeLayout>
