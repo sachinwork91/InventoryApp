@@ -1,8 +1,10 @@
 package com.udacity.submissions.sachin.inventoryapp;
 
 
+import android.app.AlertDialog;
 import android.content.ContentUris;
 import android.content.ContentValues;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -79,7 +81,18 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
         if (id == R.id.deleteAllAction) {
-            deleteAll();
+
+            DialogInterface.OnClickListener discardButtonClickListener =
+                    new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            // User clicked "Discard" button, close the current activity.
+                            deleteAll();
+                        }
+                    };
+
+            // Show dialog that there are unsaved changes
+            showDeleteAllDialog(discardButtonClickListener);
             return true;
         }
         if (id == R.id.dummyAction) {
@@ -89,6 +102,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         return super.onOptionsItemSelected(item);
     }
 
+    //This method inserts the data
     public void insert() {
         ContentValues values = new ContentValues();
         values.put(ProductContract.ProductsEntry.PRODUCTNAME, "PHONE");
@@ -98,6 +112,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         getContentResolver().insert(ProductContract.ProductsEntry.CONTENT_URI, values);
     }
 
+    //This method delets all the inventory data
     public void deleteAll() {
         getContentResolver().delete(ProductContract.ProductsEntry.CONTENT_URI, null, null);
     }
@@ -117,5 +132,19 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
         productsAdapter.swapCursor(null);
+    }
+
+    private void showDeleteAllDialog(
+            DialogInterface.OnClickListener discardButtonClickListener) {
+        // Create an AlertDialog.Builder and set the message, and click listeners
+        // for the postivie and negative buttons on the dialog.
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage("Delete All Data");
+        builder.setPositiveButton("Confirm Delete! ?", discardButtonClickListener);
+        builder.setNegativeButton("Cancel", null);
+
+        // Create and show the AlertDialog
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
     }
 }
